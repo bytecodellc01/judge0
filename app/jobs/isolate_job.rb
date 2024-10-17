@@ -303,15 +303,28 @@ class IsolateJob < ApplicationJob
       }
     ).to_json
 
+    callback_url = URI.parse(submission.callback_url)
+    headers = { "Content-Type" => "application/json" }
+
+    if callback_url.query
+      query_params = CGI.parse(callback_url.query)
+      if query_params.has_key?("access_token")
+        access_token = query_params["access_token"].first
+        headers["Authorization"] = "Bearer #{access_token}"
+        
+        # Remove access_token from the URL
+        filtered_params = query_params.reject { |k, _| k == "access_token" }
+        callback_url.query = filtered_params.empty? ? nil : URI.encode_www_form(filtered_params)
+      end
+    end
+
     Config::CALLBACKS_MAX_TRIES.times do
       retry_count = 0
       begin
         response = HTTParty.put(
-          submission.callback_url,
+          callback_url,
           body: serialized_submission,
-          headers: {
-            "Content-Type" => "application/json"
-          },
+          headers: headers,
           timeout: Config::CALLBACKS_TIMEOUT
         )
         Rails.logger.info("Callback response for submission #{submission.id}: #{response.code}")
