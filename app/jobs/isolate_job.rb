@@ -304,6 +304,7 @@ class IsolateJob < ApplicationJob
     ).to_json
 
     Config::CALLBACKS_MAX_TRIES.times do
+      retry_count = 0
       begin
         response = HTTParty.put(
           submission.callback_url,
@@ -313,8 +314,16 @@ class IsolateJob < ApplicationJob
           },
           timeout: Config::CALLBACKS_TIMEOUT
         )
+        Rails.logger.info("Callback response for submission #{submission.id}: #{response.code}")
         break
       rescue Exception => e
+        Rails.logger.error("Callback error for submission #{submission.id}: #{e.message}")
+        retry_count += 1
+        if retry_count < Config::CALLBACKS_MAX_TRIES
+          sleep_time = (2 ** retry_count) + rand(0..1000) / 1000.0
+          sleep(sleep_time)
+          retry
+        end
       end
     end
   rescue Exception => e
