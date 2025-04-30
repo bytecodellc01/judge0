@@ -1,4 +1,4 @@
-FROM judge0/compilers:1.4.0 AS production
+FROM us-central1-docker.pkg.dev/code-sandbox-stg-og182-qw846/bytebytego-docker-repo/judge0-compilers:1.5.1 as production
 
 ENV JUDGE0_HOMEPAGE "https://judge0.com"
 LABEL homepage=$JUDGE0_HOMEPAGE
